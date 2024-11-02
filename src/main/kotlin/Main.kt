@@ -8,9 +8,9 @@ import kotlin.io.path.*
 
 var lineChangeCount = 0
 
-enum class Blueprint(val directory: String) {
-    Template("templates"),
-    Example("examples")
+enum class Blueprint(val codeDirectory: String, val testsDirectory: String) {
+    Template("templates", "templates_test"),
+    Example("examples", "examples_test")
 }
 
 fun main() {
@@ -45,13 +45,13 @@ fun createProject(resourcesPath: Path, destinationPath: Path,
     )
 
     copyCodeTree(
-        source("java", "src", blueprint.directory, name),
+        source("java", "src", blueprint.codeDirectory, name),
         destination("src", "main", "java", "frc", "robot")
     )
 
     if (hasUnitTests) {
         copyCodeTree(
-            source("java", "src", blueprint.directory, name),
+            source("java", "src", blueprint.testsDirectory, name),
             destination("src", "test", "java", "frc", "robot")
         )
     }
