@@ -8,7 +8,8 @@ import kotlin.io.path.*
 
 fun createProject(resourcesPath: Path, destinationPath: Path,
                   config: ProjectConfig,
-                  teamNumber: Int) {
+                  teamNumber: Int,
+                  teamPackage: String) {
 
     // See vscode-wpilib/src/shared/exampletemplateapi.ts
     // vscode-wpilib/src/shared/generator.ts
@@ -26,7 +27,8 @@ fun createProject(resourcesPath: Path, destinationPath: Path,
             ProjectType.Template -> "templates"
             ProjectType.Example -> "examples"
         }, config.name),
-        destination("src", "main", "java", "frc", "robot")
+        destination("src", "main", "java", *teamPackage.split(".").toTypedArray()),
+        teamPackage
     )
 
     if (config.hasUnitTests)
@@ -35,7 +37,8 @@ fun createProject(resourcesPath: Path, destinationPath: Path,
                 ProjectType.Template -> "templates_test"
                 ProjectType.Example -> "examples_test"
             }, config.name),
-            destination("src", "test", "java", "frc", "robot")
+            destination("src", "test", "java", *teamPackage.split(".").toTypedArray()),
+            teamPackage
         )
 
     copyGradleTree(
@@ -52,7 +55,8 @@ fun createProject(resourcesPath: Path, destinationPath: Path,
 
     patchGradleBuild(
         resource("gradle", "version.txt"),
-        destination("build.gradle")
+        destination("build.gradle"),
+        teamPackage
     )
 
     createDeployDirectory(destination("src", "main", "deploy"))
@@ -60,21 +64,21 @@ fun createProject(resourcesPath: Path, destinationPath: Path,
     copyVendordeps(
         resource("vendordeps"),
         destination("vendordeps"),
-        extraVendordeps = config.extraVendordeps
+        config.extraVendordeps
     )
 
     setTeamNumber(destination(".wpilib", "wpilib_preferences.json"),
         teamNumber)
 }
 
-private fun copyCodeTree(sourceDir: Path, destinationDir: Path) {
+private fun copyCodeTree(sourceDir: Path, destinationDir: Path, teamPackage: String) {
     Files.walk(sourceDir).forEach { sourcePath ->
         val destinationPath = destinationDir.resolve(sourceDir.relativize(sourcePath))
         if (sourcePath.isDirectory()) {
             destinationPath.createDirectories()
         } else if (sourcePath.isRegularFile()) {
             if (sourcePath.name.endsWith(".gradle") || sourcePath.name.endsWith(".java")) {
-                copyAndProcessCodeFile(sourcePath, destinationPath)
+                copyAndProcessCodeFile(sourcePath, destinationPath, teamPackage)
             } else {
                 Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING)
             }
@@ -83,15 +87,12 @@ private fun copyCodeTree(sourceDir: Path, destinationDir: Path) {
 }
 
 private val packageRegex = Regex("""edu\.wpi\.first\.wpilibj\.(?:examples|templates)\.[^.;]+""")
-private val packageReplacement = "frc.robot"
 
-private fun copyAndProcessCodeFile(sourcePath: Path, destinationPath: Path) {
+private fun copyAndProcessCodeFile(sourcePath: Path, destinationPath: Path, teamPackage: String) {
     sourcePath.toFile().bufferedReader().use { reader ->
         destinationPath.toFile().bufferedWriter().use { writer ->
             reader.lineSequence().forEach { line ->
-                // Replace edu.wpi.first... package declarations with the default
-                // frc.robot ones.
-                writer.write(line.replace(packageRegex, packageReplacement))
+                writer.write(line.replace(packageRegex, teamPackage))
                 writer.newLine()
             }
         }
@@ -127,15 +128,11 @@ private fun setExecutableBit(path: Path) {
     Files.setPosixFilePermissions(path, permissions)
 }
 
-private val mainClassRegex = "###ROBOTCLASSREPLACE###"
-private val mainClassReplacement = "frc.robot.Main"
-private val gradleVersionRegex = "###GRADLERIOREPLACE###"
-
-private fun patchGradleBuild(gradleVersionPath: Path, gradleBuild: Path) {
+private fun patchGradleBuild(gradleVersionPath: Path, gradleBuild: Path, teamPackage: String) {
     val version = gradleVersionPath.readText().trim()
     val text = gradleBuild.readText()
-        .replace(mainClassRegex, mainClassReplacement)
-        .replace(gradleVersionRegex, version)
+        .replace("###ROBOTCLASSREPLACE###", "${teamPackage}.Main")
+        .replace("###GRADLERIOREPLACE###", version)
     gradleBuild.writeText(text)
 }
 

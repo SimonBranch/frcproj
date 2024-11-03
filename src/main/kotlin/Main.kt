@@ -32,7 +32,8 @@ fun main() {
     val projectType = chooseProjectType()
     val templateConfig = chooseProject(resourcesPath, projectType)
     val teamNumber = chooseTeamNumber()
-    createProject(resourcesPath, destinationPath, templateConfig, teamNumber)
+    val teamPackage = chooseTeamPackage()
+    createProject(resourcesPath, destinationPath, templateConfig, teamNumber, teamPackage)
     println("project successfully created")
 }
 
@@ -197,6 +198,20 @@ private fun chooseTeamNumber(): Int {
             return readln().toInt()
         } catch (e: NumberFormatException) {
             println("invalid number")
+        }
+    }
+}
+
+private fun chooseTeamPackage(): String {
+    while (true) {
+        print("what package path would you like to use? [frc.robot] ")
+        val s = readln()
+        if (s == "") {
+            return "frc.robot"
+        } else if (s.matches(Regex("""^[a-zA-Z0-9_.]+$"""))) {
+            return s
+        } else {
+            println("invalid package")
         }
     }
 }
