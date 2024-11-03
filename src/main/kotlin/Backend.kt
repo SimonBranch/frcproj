@@ -67,9 +67,9 @@ fun createProject(resourcesPath: Path, destinationPath: Path,
         teamNumber)
 }
 
-private fun copyCodeTree(sourceDir: Path, destDir: Path) {
+private fun copyCodeTree(sourceDir: Path, destinationDir: Path) {
     Files.walk(sourceDir).forEach { sourcePath ->
-        val destinationPath = destDir.resolve(sourceDir.relativize(sourcePath))
+        val destinationPath = destinationDir.resolve(sourceDir.relativize(sourcePath))
         if (sourcePath.isDirectory()) {
             destinationPath.createDirectories()
         } else if (sourcePath.isRegularFile()) {
